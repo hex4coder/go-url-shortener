@@ -1,16 +1,34 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"strings"
 
+	"github.com/hex4coder/go-url-shortener/models"
 	"github.com/hex4coder/go-url-shortener/utils"
 )
 
 type Server struct {
-	shortener utils.ShortenerI
-	port      int
+	releasemode bool
+	shortener   utils.ShortenerI
+	port        int
+	shortlinks  []*models.ShortLink
+	ssl         bool
+	verbose     bool
+	domain      string
 }
 
+func NewServer(port int, shortener utils.ShortenerI, verbose bool, ssl bool) *Server {
+	return &Server{
+		shortener: shortener,
+		port:      port,
+		domain:    "he.i",
+		ssl:       ssl,
+		verbose:   verbose,
+	}
+}
 func (s *Server) Init() {
 
 	// read file excels
@@ -22,22 +40,87 @@ func (s *Server) Init() {
 	}
 
 	fmt.Printf("[INFO] - Ditemukan %d data, lanjut memproses shortlinks....", len(datalinks))
-	for _, dl := range datalinks {
+	if s.verbose {
+		for _, dl := range datalinks {
 
-		fmt.Println(dl.Teacher)
-		fmt.Println(dl.Lesson)
-		fmt.Println(dl.LongUrl)
-		fmt.Println(dl.Token)
-		fmt.Println("--------------------------------------------------")
-		fmt.Println("")
+			fmt.Println(dl.Teacher)
+			fmt.Println(dl.Lesson)
+			fmt.Println(dl.LongUrl)
+			fmt.Println(dl.Token)
+			fmt.Println("--------------------------------------------------")
+			fmt.Println("")
+		}
 	}
+
+	err, shortlinks := s.shortener.GenerateShortLink(datalinks)
+	if err != nil {
+
+		fmt.Printf("[ERROR] - %v\r\n", err)
+		return
+
+	}
+
+	basehttp := "http"
+	if s.ssl {
+		basehttp = "https"
+	}
+
+	for i, link := range shortlinks {
+		domain := s.domain
+
+		if s.releasemode == false {
+			domain = fmt.Sprintf("localhost:%d", s.port)
+		}
+
+		link.ShortUrl = fmt.Sprintf("%s://%s/%s", basehttp, domain, link.UniqueCode)
+		shortlinks[i] = link
+	}
+
+	s.shortlinks = shortlinks
+	fmt.Printf("[GENERATED] - Berhasil membuat link pendek sebanyak : %d link\r\n", len(shortlinks))
 }
 
-func (s *Server) Run() {}
+func (s *Server) Run() {
+	fmt.Printf("Server started on port :%d\r\n", s.port)
 
-func NewServer(port int, shortener utils.ShortenerI) *Server {
-	return &Server{
-		shortener: shortener,
-		port:      port,
-	}
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		// Get the full URL path
+		path := r.URL.Path
+
+		// Remove the leading slash
+		if len(path) > 0 && path[0] == '/' {
+			path = path[1:]
+		}
+
+		// Split the path into segments
+		segments := strings.Split(path, "/")
+		if len(segments) > 0 && segments[0] != "" {
+			// Access specific parameters.
+			uniqId := segments[0]
+			found := false
+			flink := new(models.ShortLink)
+			for _, link := range s.shortlinks {
+				if link.UniqueCode == uniqId {
+					found = true
+					flink = link
+					break
+				}
+			}
+
+			if found {
+				fmt.Printf("%s found, redirecting to : %s \r\n", uniqId, flink.Data.LongUrl)
+				http.Redirect(w, r, flink.Data.LongUrl, http.StatusPermanentRedirect)
+				return
+			}
+
+			fmt.Printf("%s not found in shorted links\r\n", uniqId)
+		} else {
+			json.NewEncoder(w).Encode(s.shortlinks)
+		}
+	})
+	http.ListenAndServe(fmt.Sprintf(":%d", s.port), mux)
+
 }

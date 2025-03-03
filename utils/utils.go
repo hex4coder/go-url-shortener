@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/hex4coder/go-url-shortener/models"
 )
@@ -99,7 +100,63 @@ func (s *Shortener) ReadFile(filename string) (error, []*models.DataLink) {
 }
 
 func (s *Shortener) GenerateShortLink(datalinks []*models.DataLink) (error, []*models.ShortLink) {
-	shortlinks := make([]*models.ShortLink, len(datalinks))
 
-	return nil, shortlinks
+	var wg sync.WaitGroup
+
+	type GeneratedShortLinks struct {
+		mu         sync.Mutex
+		shortlinks []*models.ShortLink
+	}
+
+	ds := new(GeneratedShortLinks)
+	dc := make(chan *models.ShortLink)
+	done := make(chan any)
+
+	go func(listdata []*models.DataLink) {
+		for {
+			select {
+			case <-done:
+				return
+
+			case shortlink := <-dc:
+				func(newSL *models.ShortLink) {
+					ds.mu.Lock()
+					ds.shortlinks = append(ds.shortlinks, newSL)
+
+					if len(ds.shortlinks) >= len(listdata) {
+						done <- true
+					}
+
+					defer ds.mu.Unlock()
+				}(shortlink)
+
+			}
+		}
+
+	}(datalinks)
+
+	for i, dl := range datalinks {
+		wg.Add(1)
+		go func(wg *sync.WaitGroup, cc chan *models.ShortLink, index int) {
+			defer wg.Done()
+
+			// create new short link
+			randomString := GenerateRandomString(s.MaxLength)
+			shortlink := fmt.Sprintf("%s/%s", s.Domain, randomString)
+
+			// create new data
+			sl := new(models.ShortLink)
+			sl.ID = index + 1
+			sl.UniqueCode = randomString
+			sl.Data = dl
+			sl.ShortUrl = shortlink
+
+			// send data to channel
+			cc <- sl
+		}(&wg, dc, i)
+	}
+
+	wg.Wait()
+
+	return nil, ds.shortlinks
 }
