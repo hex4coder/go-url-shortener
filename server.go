@@ -19,6 +19,10 @@ type Server struct {
 	verbose     bool
 	domain      string
 }
+type ServerResponse struct {
+	s       *Server
+	handler http.Handler
+}
 
 func NewServer(port int, shortener utils.ShortenerI, verbose bool, ssl bool) *Server {
 	return &Server{
@@ -80,14 +84,11 @@ func (s *Server) Init() {
 	fmt.Printf("[GENERATED] - Berhasil membuat link pendek sebanyak : %d link\r\n", len(shortlinks))
 }
 
-func (s *Server) Run() {
-	fmt.Printf("Server started on port :%d\r\n", s.port)
+func rootHandler(s *Server) http.HandlerFunc {
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-
-		// Get the full URL path
+	return func(w http.ResponseWriter, r *http.Request) {
+		//TODO: Create browser parser only for Exam Browser
+		fmt.Printf("Incoming request from : r.UserAgent(): %v\n", r.UserAgent()) // Get the full URL path
 		path := r.URL.Path
 
 		// Remove the leading slash
@@ -115,12 +116,26 @@ func (s *Server) Run() {
 				http.Redirect(w, r, flink.Data.LongUrl, http.StatusPermanentRedirect)
 				return
 			}
-
+			w.WriteHeader(http.StatusNotFound)
 			fmt.Printf("%s not found in shorted links\r\n", uniqId)
+			fmt.Fprintln(w, "unique id not found")
 		} else {
-			json.NewEncoder(w).Encode(s.shortlinks)
+			if s.releasemode == false {
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(s.shortlinks)
+				return
+			}
+			fmt.Fprintln(w, "no unique id specifiq in URL : this is the root path")
 		}
-	})
-	http.ListenAndServe(fmt.Sprintf(":%d", s.port), mux)
+	}
+}
+
+func (s *Server) Run() {
+	fmt.Printf("Server started on port :%d\r\n", s.port)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /", rootHandler(s))
+	muxWithMiddleware := NewMiddleware("browserUserAgent", mux)
+	http.ListenAndServe(fmt.Sprintf(":%d", s.port), muxWithMiddleware)
 
 }
