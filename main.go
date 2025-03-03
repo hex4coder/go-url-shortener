@@ -16,16 +16,13 @@ func main() {
 		end := time.Since(start)
 		fmt.Printf("[INFO] - Program running in : %v\r\n", end)
 	}()
+
 	// new generator url
 	st := utils.NewShortener("h.ei", 3)
 
-	// read file excels
-	err, _ := st.ReadFile("excelfile")
+	// new server
+	server := NewServer(1996, st)
+	server.Init()
+	server.Run()
 
-	if err != nil {
-		fmt.Printf("[ERROR] - %v\r\n", err)
-		return
-	}
-
-	fmt.Printf("st struc : %v \r\n", st)
 }
