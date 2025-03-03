@@ -1,13 +1,12 @@
 package utils
 
 import (
-	"fmt"
 	"github.com/xuri/excelize/v2"
 )
 
 type DataExcel struct {
-	rows [][]string
-	cols []string
+	Rows [][]string
+	Cols []string
 }
 
 func ReadExcelFile(filename string) (error, *DataExcel) {
@@ -19,7 +18,7 @@ func ReadExcelFile(filename string) (error, *DataExcel) {
 		return err, nil
 	}
 
-	rows, err := file.GetRows("Sheet1")
+	rows, err := file.GetRows("Form Responses 1")
 	if err != nil {
 		return err, nil
 	}
@@ -27,17 +26,15 @@ func ReadExcelFile(filename string) (error, *DataExcel) {
 	cols := make([]string, len(rows[0]))
 
 	for i, row := range rows {
-
 		for c, col := range row {
 			if i == 0 {
 				cols[c] = col
 			}
 		}
-		fmt.Println()
 	}
 
-	d.cols = cols
-	d.rows = rows
+	d.Cols = cols
+	d.Rows = rows
 
 	return nil, d
 }
