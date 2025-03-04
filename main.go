@@ -21,7 +21,7 @@ func main() {
 	st := utils.NewShortener("h.ei", 3)
 
 	// new server
-	server := NewServer(1996, st, false, false)
+	server := NewServer(WithShortener(st), WithPort(1994))
 	server.Init()
 	server.Run()
 

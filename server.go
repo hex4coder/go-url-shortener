@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -10,29 +11,66 @@ import (
 	"github.com/hex4coder/go-url-shortener/utils"
 )
 
-type Server struct {
+type ServerOpts struct {
 	releasemode bool
-	shortener   utils.ShortenerI
-	port        int
-	shortlinks  []*models.ShortLink
 	ssl         bool
 	verbose     bool
 	domain      string
-}
-type ServerResponse struct {
-	s       *Server
-	handler http.Handler
+	shortener   utils.ShortenerI
+	shortlinks  []*models.ShortLink
+	port        int
 }
 
-func NewServer(port int, shortener utils.ShortenerI, verbose bool, ssl bool) *Server {
-	return &Server{
-		shortener: shortener,
-		port:      port,
-		domain:    "he.i",
-		ssl:       ssl,
-		verbose:   verbose,
+func WithShortener(shortener utils.ShortenerI) ServerFuncOpt {
+	return func(f *ServerOpts) {
+		f.shortener = shortener
 	}
 }
+func WithDomain(domain string) ServerFuncOpt {
+	return func(f *ServerOpts) {
+		f.domain = domain
+	}
+}
+func WithSSL(f *ServerOpts) {
+	f.ssl = true
+}
+
+func WithReleaseMode(f *ServerOpts) {
+	f.releasemode = true
+}
+func WithVerbose(f *ServerOpts) {
+	f.verbose = true
+}
+func WithPort(port int) ServerFuncOpt {
+	return func(f *ServerOpts) {
+		f.port = port
+	}
+}
+
+type Server struct {
+	ServerOpts
+}
+
+type ServerFuncOpt func(*ServerOpts)
+
+func DefaultServerOpts() ServerOpts {
+	return ServerOpts{
+		releasemode: false,
+		verbose:     false,
+		domain:      "he.i",
+		ssl:         false,
+		port:        1996,
+	}
+}
+func NewServer(opts ...ServerFuncOpt) *Server {
+	d := DefaultServerOpts()
+
+	for _, opt := range opts {
+		opt(&d)
+	}
+	return &Server{d}
+}
+
 func (s *Server) Init() {
 
 	// read file excels
@@ -46,7 +84,6 @@ func (s *Server) Init() {
 	fmt.Printf("[INFO] - Ditemukan %d data, lanjut memproses shortlinks....", len(datalinks))
 	if s.verbose {
 		for _, dl := range datalinks {
-
 			fmt.Println(dl.Teacher)
 			fmt.Println(dl.Lesson)
 			fmt.Println(dl.LongUrl)
@@ -73,10 +110,11 @@ func (s *Server) Init() {
 		domain := s.domain
 
 		if s.releasemode == false {
-			domain = fmt.Sprintf("localhost:%d", s.port)
+			domain = fmt.Sprintf("192.168.77.205:%d", s.port)
 		}
 
 		link.ShortUrl = fmt.Sprintf("%s://%s/%s", basehttp, domain, link.UniqueCode)
+		link.QrImageUrl = utils.EncodeURLToImageBase64(link.ShortUrl)
 		shortlinks[i] = link
 	}
 
@@ -135,7 +173,7 @@ func (s *Server) Run() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /", rootHandler(s))
-	muxWithMiddleware := NewMiddleware("browserUserAgent", mux)
-	http.ListenAndServe(fmt.Sprintf(":%d", s.port), muxWithMiddleware)
+	//muxWithMiddleware := NewMiddleware("browserUserAgent", mux)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", s.port), mux))
 
 }

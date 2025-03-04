@@ -13,6 +13,7 @@ type ShortLink struct {
 	ShortUrl   string    `json:"short_url"`
 	UniqueCode string    `json:"unique_code"`
 	Data       *DataLink `json:"data"`
+	QrImageUrl string    `json:"qrimage_url"`
 }
 
 type Links struct {

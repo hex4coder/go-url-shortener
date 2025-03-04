@@ -15,6 +15,8 @@ type Middleware struct {
 func (m *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("checking browser agent ....")
 	userAgent := r.UserAgent()
+	fmt.Println(userAgent, r.Header)
+
 	if strings.Contains(userAgent, m.UserAgent) {
 		m.handler.ServeHTTP(w, r)
 	} else {
