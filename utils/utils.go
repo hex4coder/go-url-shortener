@@ -3,6 +3,9 @@ package utils
 import (
 	"fmt"
 	"sync"
+	"time"
+
+	"gorm.io/gorm"
 
 	"github.com/hex4coder/go-url-shortener/models"
 )
@@ -10,6 +13,7 @@ import (
 type Shortener struct {
 	Domain    string
 	MaxLength int
+	Db        *gorm.DB
 }
 
 type ShortenerI interface {
@@ -18,7 +22,7 @@ type ShortenerI interface {
 	GenerateShortLink([]*models.DataLink) (error, []*models.ShortLink)
 }
 
-func NewShortener(domain string, maxlength int) *Shortener {
+func NewShortener(db *gorm.DB, domain string, maxlength int) *Shortener {
 	return &Shortener{
 		Domain:    domain,
 		MaxLength: maxlength,
@@ -38,11 +42,14 @@ func (s *Shortener) MappingToDataLinks(dataexcel *DataExcel) (error, []*models.D
 		}
 
 		item := new(models.DataLink)
+		item.ID = uint(i)
 		item.Lesson = row[2]
 		item.Teacher = row[3]
 		item.ClassInfo = row[4]
 		item.LongUrl = row[5]
 		item.Token = row[6]
+		item.CreatedAt = time.Now()
+		item.UpdatedAt = time.Now()
 
 		if len(item.LongUrl) > 0 {
 			links = append(links, item)
@@ -53,7 +60,6 @@ func (s *Shortener) MappingToDataLinks(dataexcel *DataExcel) (error, []*models.D
 }
 
 func (s *Shortener) ReadFile(filename string) (error, []*models.DataLink) {
-
 	ec := make(chan error)
 	dc := make(chan *DataExcel)
 	dlc := make(chan *models.Links)
@@ -70,7 +76,6 @@ func (s *Shortener) ReadFile(filename string) (error, []*models.DataLink) {
 	}()
 
 	go func(ec chan error, dlc chan *models.Links) {
-
 		select {
 		case data := <-dc:
 			// run pre processing data
@@ -85,7 +90,6 @@ func (s *Shortener) ReadFile(filename string) (error, []*models.DataLink) {
 				dlc <- &models.Links{DataLinks: links}
 			}()
 		}
-
 	}(ec, dlc)
 
 	select {
@@ -100,7 +104,6 @@ func (s *Shortener) ReadFile(filename string) (error, []*models.DataLink) {
 }
 
 func (s *Shortener) GenerateShortLink(datalinks []*models.DataLink) (error, []*models.ShortLink) {
-
 	var wg sync.WaitGroup
 
 	type GeneratedShortLinks struct {
@@ -122,6 +125,10 @@ func (s *Shortener) GenerateShortLink(datalinks []*models.DataLink) (error, []*m
 				func(newSL *models.ShortLink) {
 					ds.mu.Lock()
 					ds.shortlinks = append(ds.shortlinks, newSL)
+					// insert to database
+					s.Db.Create(newSL.DataLink)
+					s.Db.Create(newSL)
+					fmt.Printf("[INSERTED] - Link %s saved\r\n", newSL.ShortUrl)
 
 					if len(ds.shortlinks) >= len(listdata) {
 						done <- true
@@ -132,7 +139,6 @@ func (s *Shortener) GenerateShortLink(datalinks []*models.DataLink) (error, []*m
 
 			}
 		}
-
 	}(datalinks)
 
 	for i, dl := range datalinks {
@@ -146,10 +152,13 @@ func (s *Shortener) GenerateShortLink(datalinks []*models.DataLink) (error, []*m
 
 			// create new data
 			sl := new(models.ShortLink)
-			sl.ID = index + 1
+			sl.ID = uint(i)
 			sl.UniqueCode = randomString
-			sl.Data = dl
+			sl.DataLinkID = dl.ID
+			sl.DataLink = *dl
 			sl.ShortUrl = shortlink
+			sl.CreatedAt = time.Now()
+			sl.UpdatedAt = time.Now()
 
 			// send data to channel
 			cc <- sl

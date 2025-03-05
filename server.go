@@ -26,11 +26,13 @@ func WithShortener(shortener utils.ShortenerI) ServerFuncOpt {
 		f.shortener = shortener
 	}
 }
+
 func WithDomain(domain string) ServerFuncOpt {
 	return func(f *ServerOpts) {
 		f.domain = domain
 	}
 }
+
 func WithSSL(f *ServerOpts) {
 	f.ssl = true
 }
@@ -38,9 +40,11 @@ func WithSSL(f *ServerOpts) {
 func WithReleaseMode(f *ServerOpts) {
 	f.releasemode = true
 }
+
 func WithVerbose(f *ServerOpts) {
 	f.verbose = true
 }
+
 func WithPort(port int) ServerFuncOpt {
 	return func(f *ServerOpts) {
 		f.port = port
@@ -62,6 +66,7 @@ func DefaultServerOpts() ServerOpts {
 		port:        1996,
 	}
 }
+
 func NewServer(opts ...ServerFuncOpt) *Server {
 	d := DefaultServerOpts()
 
@@ -72,7 +77,6 @@ func NewServer(opts ...ServerFuncOpt) *Server {
 }
 
 func (s *Server) Init() {
-
 	// read file excels
 	err, datalinks := s.shortener.ReadFile("./datasource/data.xlsx")
 
@@ -81,7 +85,7 @@ func (s *Server) Init() {
 		return
 	}
 
-	fmt.Printf("[INFO] - Ditemukan %d data, lanjut memproses shortlinks....", len(datalinks))
+	fmt.Printf("[INFO] - Ditemukan %d data, lanjut memproses shortlinks....\r\n", len(datalinks))
 	if s.verbose {
 		for _, dl := range datalinks {
 			fmt.Println(dl.Teacher)
@@ -95,7 +99,6 @@ func (s *Server) Init() {
 
 	err, shortlinks := s.shortener.GenerateShortLink(datalinks)
 	if err != nil {
-
 		fmt.Printf("[ERROR] - %v\r\n", err)
 		return
 
@@ -123,10 +126,12 @@ func (s *Server) Init() {
 }
 
 func rootHandler(s *Server) http.HandlerFunc {
-
 	return func(w http.ResponseWriter, r *http.Request) {
-		//TODO: Create browser parser only for Exam Browser
-		fmt.Printf("Incoming request from : r.UserAgent(): %v\n", r.UserAgent()) // Get the full URL path
+		// TODO: Create browser parser only for Exam Browser
+		fmt.Printf(
+			"Incoming request from : r.UserAgent(): %v\n",
+			r.UserAgent(),
+		) // Get the full URL path
 		path := r.URL.Path
 
 		// Remove the leading slash
@@ -150,8 +155,8 @@ func rootHandler(s *Server) http.HandlerFunc {
 			}
 
 			if found {
-				fmt.Printf("%s found, redirecting to : %s \r\n", uniqId, flink.Data.LongUrl)
-				http.Redirect(w, r, flink.Data.LongUrl, http.StatusPermanentRedirect)
+				fmt.Printf("%s found, redirecting to : %s \r\n", uniqId, flink.DataLink.LongUrl)
+				http.Redirect(w, r, flink.DataLink.LongUrl, http.StatusPermanentRedirect)
 				return
 			}
 			w.WriteHeader(http.StatusNotFound)
@@ -173,7 +178,6 @@ func (s *Server) Run() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /", rootHandler(s))
-	//muxWithMiddleware := NewMiddleware("browserUserAgent", mux)
+	// muxWithMiddleware := NewMiddleware("browserUserAgent", mux)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", s.port), mux))
-
 }

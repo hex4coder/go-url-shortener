@@ -8,7 +8,6 @@ import (
 )
 
 func main() {
-
 	// start program
 	start := time.Now()
 	defer func() {
@@ -17,12 +16,14 @@ func main() {
 		fmt.Printf("[INFO] - Program running in : %v\r\n", end)
 	}()
 
+	// setup database
+	InitDB()
+
 	// new generator url
-	st := utils.NewShortener("h.ei", 3)
+	st := utils.NewShortener(DB, "h.ei", 3)
 
 	// new server
-	server := NewServer(WithShortener(st), WithPort(1994))
+	server := NewServer(WithPort(1994), WithShortener(st))
 	server.Init()
 	server.Run()
-
 }
