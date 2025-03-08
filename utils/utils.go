@@ -126,9 +126,6 @@ func (s *Shortener) GenerateShortLink(datalinks []*models.DataLink) (error, []*m
 					ds.mu.Lock()
 					ds.shortlinks = append(ds.shortlinks, newSL)
 					// insert to database
-					s.Db.Create(newSL.DataLink)
-					s.Db.Create(newSL)
-					fmt.Printf("[INSERTED] - Link %s saved\r\n", newSL.ShortUrl)
 
 					if len(ds.shortlinks) >= len(listdata) {
 						done <- true
@@ -159,6 +156,7 @@ func (s *Shortener) GenerateShortLink(datalinks []*models.DataLink) (error, []*m
 			sl.ShortUrl = shortlink
 			sl.CreatedAt = time.Now()
 			sl.UpdatedAt = time.Now()
+			sl.QrImageUrl = EncodeURLToImageBase64(shortlink)
 
 			// send data to channel
 			cc <- sl
@@ -166,6 +164,10 @@ func (s *Shortener) GenerateShortLink(datalinks []*models.DataLink) (error, []*m
 	}
 
 	wg.Wait()
-
+	for _, newSL := range ds.shortlinks {
+		//	s.Db.Model(&models.DataLink{}).Create(newSL.DataLink)
+		//	s.Db.Model(&models.ShortLink{}).Create(newSL)
+		fmt.Printf("[INSERTED] - Link %+v saved\r\n", newSL)
+	}
 	return nil, ds.shortlinks
 }
