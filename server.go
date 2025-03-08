@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/hex4coder/go-url-shortener/models"
 	"github.com/hex4coder/go-url-shortener/utils"
@@ -125,51 +124,46 @@ func (s *Server) Init() {
 	fmt.Printf("[GENERATED] - Berhasil membuat link pendek sebanyak : %d link\r\n", len(shortlinks))
 }
 
-func rootHandler(s *Server) http.HandlerFunc {
+func GetByUniqID(s *Server) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// TODO: Create browser parser only for Exam Browser
 		fmt.Printf(
 			"Incoming request from : r.UserAgent(): %v\n",
 			r.UserAgent(),
-		) // Get the full URL path
-		path := r.URL.Path
+		)
 
-		// Remove the leading slash
-		if len(path) > 0 && path[0] == '/' {
-			path = path[1:]
+		// Get the full URL path
+		uniqId := r.PathValue("id")
+		found := false
+		flink := new(models.ShortLink)
+		for _, link := range s.shortlinks {
+			if link.UniqueCode == uniqId {
+				found = true
+				flink = link
+				break
+			}
 		}
 
-		// Split the path into segments
-		segments := strings.Split(path, "/")
-		if len(segments) > 0 && segments[0] != "" {
-			// Access specific parameters.
-			uniqId := segments[0]
-			found := false
-			flink := new(models.ShortLink)
-			for _, link := range s.shortlinks {
-				if link.UniqueCode == uniqId {
-					found = true
-					flink = link
-					break
-				}
-			}
-
-			if found {
-				fmt.Printf("%s found, redirecting to : %s \r\n", uniqId, flink.DataLink.LongUrl)
-				http.Redirect(w, r, flink.DataLink.LongUrl, http.StatusPermanentRedirect)
-				return
-			}
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Printf("%s not found in shorted links\r\n", uniqId)
-			fmt.Fprintln(w, "unique id not found")
-		} else {
-			if s.releasemode == false {
-				w.Header().Set("Content-Type", "application/json")
-				json.NewEncoder(w).Encode(s.shortlinks)
-				return
-			}
-			fmt.Fprintln(w, "no unique id specifiq in URL : this is the root path")
+		if found {
+			fmt.Printf("%s found, redirecting to : %s \r\n", uniqId, flink.DataLink.LongUrl)
+			http.Redirect(w, r, flink.DataLink.LongUrl, http.StatusPermanentRedirect)
+			return
 		}
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Printf("%s not found in shorted links\r\n", uniqId)
+		fmt.Fprintln(w, "unique id not found", uniqId)
+	}
+}
+
+func GetShortLinks(s *Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if len(s.shortlinks) == 0 {
+			fmt.Fprintln(w, "no shortlinks")
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(s.shortlinks)
 	}
 }
 
@@ -177,7 +171,8 @@ func (s *Server) Run() {
 	fmt.Printf("Server started on port :%d\r\n", s.port)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /", rootHandler(s))
+	mux.HandleFunc("GET /", GetShortLinks(s))
+	mux.HandleFunc("GET /{id}", GetByUniqID(s))
 	// muxWithMiddleware := NewMiddleware("browserUserAgent", mux)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", s.port), mux))
 }

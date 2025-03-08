@@ -156,7 +156,6 @@ func (s *Shortener) GenerateShortLink(datalinks []*models.DataLink) (error, []*m
 			sl.ShortUrl = shortlink
 			sl.CreatedAt = time.Now()
 			sl.UpdatedAt = time.Now()
-			sl.QrImageUrl = EncodeURLToImageBase64(shortlink)
 
 			// send data to channel
 			cc <- sl
