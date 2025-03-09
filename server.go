@@ -78,7 +78,7 @@ func NewServer(opts ...ServerFuncOpt) *Server {
 
 func (s *Server) Init() {
 	// read file excels
-	err, datalinks := s.shortener.ReadFile("./datasource/data.xlsx")
+	err, datalinks := s.shortener.ReadFile("/var/www/go-url-shortener/datasource/data.xlsx")
 
 	if err != nil {
 		fmt.Printf("[ERROR] - %v\r\n", err)
