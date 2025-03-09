@@ -163,7 +163,7 @@ func GetShortLinks(s *Server) http.HandlerFunc {
 			return
 		}
 		// render html golang
-		filepath := path.Join("views", "index.html")
+		filepath := path.Join("/var/www/go-url-shortener", "views", "index.html")
 		tmpl, err := template.ParseFiles(filepath)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
