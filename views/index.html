@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>List Links Soal</title>
+  <style>
+    body {
+      background-color: grey;
+      padding-top: 4rem;
+      text-align: center;
+    }
+
+    .container {
+      padding-top: 2rem;
+      margin: auto 4rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 2rem;
+      background-color: white;
+      min-height: 100vh;
+      border-radius: 1rem;
+    }
+
+    h1 {
+      padding: 2rem;
+      border-radius: 1rem;
+      background-color: white;
+      margin: auto 4rem;
+      margin-bottom: 2rem;
+      margin-top: 2rem;
+      display: block;
+    }
+
+    .container div {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      border: 1px solid grey;
+      border-radius: 4px;
+      padding: 1rem;
+      animation: animated 800ms ease-in-out;
+    }
+
+    .container div img {
+      height: 200px;
+      width: 200px;
+    }
+
+    .container div h2 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .container div a {
+      color: blue;
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-decoration: none;
+      transition: all 0.4s ease;
+    }
+
+    .container div a:hover {
+      text-decoration: underline;
+      color: lightskyblue;
+    }
+
+    .container div p {
+      font-size: 0.65rem;
+      font-weight: 500;
+      color: #111;
+    }
+
+    .container div p.bold {
+      font-weight: 700;
+      color: black;
+    }
+
+    @keyframes animated {
+      0% {
+        transform: translateY(-100%);
+        opacity: 0;
+      }
+
+      100% {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <h1>
+    Created By Uni Anatasya, S.Kom and Ardan, S.Kom colabs With Usman. A,
+    S.Kom
+  </h1>
+
+  <div class="container">
+    {{range $index, $item := .}}
+    <div style="animation-delay: {{$index}}00ms;">
+      <img src="data:image/png;charset=utf-8;base64,{{.QrImageUrl}}" alt="{{.QrImageUrl}}" />
+      <h2>{{.DataLink.Token}}</h2>
+      <a href="{{.ShortUrl}}">{{.ShortUrl}}</a>
+      <p>{{.DataLink.Lesson}}</p>
+      <p>{{.DataLink.ClassInfo}}</p>
+      <p class="bold">{{.DataLink.Teacher}}</p>
+    </div>
+    {{ end }}
+  </div>
+</body>
+
+</html>

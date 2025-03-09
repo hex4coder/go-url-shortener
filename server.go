@@ -1,10 +1,11 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
+	"path"
 
 	"github.com/hex4coder/go-url-shortener/models"
 	"github.com/hex4coder/go-url-shortener/utils"
@@ -161,9 +162,18 @@ func GetShortLinks(s *Server) http.HandlerFunc {
 			fmt.Fprintln(w, "no shortlinks")
 			return
 		}
-		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(s.shortlinks)
+		// render html golang
+		filepath := path.Join("views", "index.html")
+		tmpl, err := template.ParseFiles(filepath)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		err = tmpl.Execute(w, s.shortlinks)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	}
 }
 

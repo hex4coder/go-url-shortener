@@ -13,7 +13,7 @@ func EncodeUrlToQrImage(url string) (error, []byte) {
 }
 
 func EncodeURLToImageBase64(url string) string {
-	var res string = "data:image/png;base64, "
+	var res string = ""
 
 	_, png := EncodeUrlToQrImage(url)
 
