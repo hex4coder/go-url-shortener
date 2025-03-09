@@ -19,11 +19,15 @@ func main() {
 	// setup database
 	InitDB()
 
+	domain := "exam.smkncampalagian.sch.id"
+
 	// new generator url
-	st := utils.NewShortener(DB, "h.ei", 3)
+	st := utils.NewShortener(DB, domain, 3)
 
 	// new server
-	server := NewServer(WithPort(1994), WithShortener(st))
+	server := NewServer(
+		WithDomain(domain),
+		WithPort(1994), WithShortener(st), WithReleaseMode)
 	server.Init()
 	server.Run()
 }
